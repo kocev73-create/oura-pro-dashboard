@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="sr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Oura Pro Dashboard</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f1115">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <style>
+    :root {
+      --bg:#f4f5f7; --card:#fff; --text:#111; --muted:#6b7280;
+      --line:#e5e7eb; --dark:#0f1115; --soft:#eef0f4;
+      --good:#0b7a3b; --warn:#b46b00; --bad:#b00020;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin:0; padding:18px; padding-bottom:40px;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      background:var(--bg); color:var(--text);
+    }
+    .app { max-width:900px; margin:0 auto; }
+    .top {
+      background:linear-gradient(135deg,#0f1115,#2d3340);
+      color:white; border-radius:26px; padding:22px; margin-bottom:14px;
+      box-shadow:0 12px 30px rgba(0,0,0,.15);
+    }
+    h1 { margin:0 0 6px; font-size:31px; letter-spacing:-.7px; }
+    h2 { margin:0 0 14px; font-size:22px; }
+    .small { color:var(--muted); font-size:14px; line-height:1.45; }
+    .top .small { color:#cbd5e1; }
+    .card {
+      background:var(--card); border-radius:24px; padding:18px; margin:14px 0;
+      box-shadow:0 8px 25px rgba(15,17,21,.06);
+    }
+    label { display:block; font-weight:700; margin:12px 0 7px; }
+    input, select, textarea {
+      width:100%; font-size:16px; padding:14px; border:1px solid var(--line);
+      border-radius:15px; background:white;
+    }
+    textarea { min-height:86px; resize:vertical; }
+    button {
+      width:100%; border:0; border-radius:16px; padding:15px 14px;
+      font-size:16px; font-weight:800; background:var(--dark); color:#fff; margin-top:12px;
+    }
+    button.secondary { background:var(--soft); color:#111; }
+    button.danger { background:#fee2e2; color:#991b1b; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .metric { background:#f6f7f9; border-radius:18px; padding:13px; }
+    .metric b { display:block; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; }
+    .metric span { display:block; font-size:25px; font-weight:900; margin-top:3px; }
+    .good { color:var(--good); } .warn { color:var(--warn); } .bad { color:var(--bad); }
+    .pill { display:inline-block; border-radius:999px; padding:7px 10px; background:#eef2ff; margin:4px 4px 0 0; font-weight:700; font-size:13px; }
+    .pill.good { background:#dcfce7; } .pill.warn { background:#fef3c7; } .pill.bad { background:#fee2e2; }
+    canvas { width:100%; height:240px; background:#fafafa; border-radius:18px; border:1px solid var(--line); }
+    .row { display:flex; gap:10px; }
+    .row > * { flex:1; }
+    pre { white-space:pre-wrap; word-break:break-word; background:#f6f7f9; border-radius:15px; padding:12px; max-height:280px; overflow:auto; }
+    .hidden { display:none; }
+    @media (max-width:420px){ body{padding:12px}.grid{grid-template-columns:1fr 1fr}.top{border-radius:22px} }
+  </style>
+</head>
+<body>
+<main class="app">
+  <section class="top">
+    <h1>Oura Pro Dashboard</h1>
+    <div class="small">Privatni iPhone dashboard za san, stres, HRV, puls, oporavak, alkohol i dnevne zaključke.</div>
+  </section>
+
+  <section class="card">
+    <h2>1. Povezivanje</h2>
+    <label>Oura Personal Access Token</label>
+    <input id="token" type="password" placeholder="Nalepi Oura token ovde">
+    <button id="saveToken">Sačuvaj token</button>
+    <button class="secondary" id="clearToken">Obriši token</button>
+    <p class="small">Token ostaje samo u ovom browseru. Čuvaj ga kao lozinku.</p>
+  </section>
+
+  <section class="card">
+    <h2>2. Dnevni pregled</h2>
+    <button id="loadToday">Učitaj današnje podatke</button>
+    <div id="status" class="small" style="margin-top:10px;"></div>
+    <div id="todayGrid" class="grid hidden" style="margin-top:12px;">
+      <div class="metric"><b>Readiness</b><span id="readiness">—</span></div>
+      <div class="metric"><b>Sleep</b><span id="sleep">—</span></div>
+      <div class="metric"><b>HRV</b><span id="hrv">—</span></div>
+      <div class="metric"><b>Lowest HR</b><span id="hr">—</span></div>
+      <div class="metric"><b>Stres nivo</b><span id="stress">—</span></div>
+      <div class="metric"><b>Crvena zona</b><span id="redzone">—</span></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Pametan zaključak</h2>
+    <div id="insight">Još nema podataka.</div>
+    <div id="pills" style="margin-top:10px;"></div>
+  </section>
+
+  <section class="card">
+    <h2>Beleška za danas</h2>
+    <div class="row">
+      <select id="alcohol">
+        <option value="">Alkohol?</option>
+        <option value="no">Nisam pio</option>
+        <option value="light">Malo</option>
+        <option value="medium">Srednje</option>
+        <option value="heavy">Mnogo</option>
+      </select>
+      <select id="lateFood">
+        <option value="">Kasna hrana?</option>
+        <option value="no">Ne</option>
+        <option value="yes">Da</option>
+      </select>
+    </div>
+    <textarea id="note" placeholder="Primer: stresan dan, kasno jeo, vozio dugo, bolest, trening..."></textarea>
+    <button id="saveNote">Sačuvaj belešku</button>
+  </section>
+
+  <section class="card">
+    <h2>Nedeljni grafikon</h2>
+    <button id="loadWeek">Učitaj poslednjih 7 dana</button>
+    <canvas id="chart" width="760" height="260"></canvas>
+    <p class="small">Linije: Readiness, Sleep, HRV. Koristi se za brzu sliku trenda.</p>
+  </section>
+
+  <section class="card">
+    <h2>Nedeljni izveštaj</h2>
+    <button id="makeReport">Napravi tekst izveštaja</button>
+    <pre id="report">—</pre>
+  </section>
+
+  <section class="card">
+    <h2>Upozorenja</h2>
+    <div id="alerts" class="small">Upozorenja će se pojaviti posle učitavanja podataka.</div>
+  </section>
+
+  <section class="card">
+    <h2>Instalacija na iPhone</h2>
+    <p class="small">Kad ovo bude online preko GitHub Pages: Safari → Share → Add to Home Screen. Tada će izgledati kao prava aplikacija.</p>
+  </section>
+
+  <section class="card">
+    <h2>Debug</h2>
+    <pre id="raw">—</pre>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
